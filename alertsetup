@@ -1,7 +1,7 @@
 # Create SNS topic
 aws sns create-topic --name CPUAlertTopic
 
-# Subscribe your email to the topic
+# give  your email to the topic
 aws sns subscribe \
   --topic-arn arn:aws:sns:<region>:<account-id>:CPUAlertTopic \
   --protocol email \
