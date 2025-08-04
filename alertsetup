@@ -1,0 +1,22 @@
+# Create SNS topic
+aws sns create-topic --name CPUAlertTopic
+
+# Subscribe your email to the topic
+aws sns subscribe \
+  --topic-arn arn:aws:sns:<region>:<account-id>:CPUAlertTopic \
+  --protocol email \
+  --notification-endpoint youremail@example.com
+
+# Create CloudWatch alarm
+aws cloudwatch put-metric-alarm \
+  --alarm-name "HighCPUAlarm" \
+  --metric-name CPUUtilization \
+  --namespace AWS/EC2 \
+  --statistic Average \
+  --period 300 \
+  --threshold 80 \
+  --comparison-operator GreaterThanThreshold \
+  --dimensions Name=InstanceId,Value=<your-instance-id> \
+  --evaluation-periods 1 \
+  --alarm-actions arn:aws:sns:<region>:<account-id>:CPUAlertTopic \
+  --unit Percent

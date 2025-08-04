@@ -1,0 +1,60 @@
+pipeline {
+    agent any
+
+    environment {
+        // Replace with your EC2 instance's SSH details
+        DEPLOY_USER = 'ec2-user'
+        DEPLOY_HOST = 'your-ec2-instance.compute.amazonaws.com'
+        DEPLOY_KEY = credentials('ec2-ssh-key') // Jenkins credentials
+        APP_DIR = '/home/ec2-user/app'
+    }
+
+    stages {
+        stage('Checkout Code') {
+            steps {
+                git branch: 'main', url: 'https://github.com/your-username/your-repo.git'
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                sh 'npm install'
+            }
+        }
+
+        stage('Run Tests') {
+            steps {
+                sh 'npm test'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                // For a Node app, maybe bundle or transpile here if needed
+                echo 'Build complete'
+            }
+        }
+
+        stage('Deploy to AWS EC2') {
+            when {
+                expression { currentBuild.result == null || currentBuild.result == 'SUCCESS' }
+            }
+            steps {
+                // Copy files to EC2 instance
+                sshagent (credentials: ['ec2-ssh-key']) {
+                    sh """
+                    ssh -o StrictHostKeyChecking=no $DEPLOY_USER@$DEPLOY_HOST 'mkdir -p $APP_DIR'
+                    scp -o StrictHostKeyChecking=no -r * $DEPLOY_USER@$DEPLOY_HOST:$APP_DIR
+                    ssh -o StrictHostKeyChecking=no $DEPLOY_USER@$DEPLOY_HOST 'cd $APP_DIR && npm install && pm2 restart app.js || pm2 start app.js'
+                    """
+                }
+            }
+        }
+    }
+
+    post {
+        failure {
+            echo 'Pipeline failed!'
+        }
+    }
+}
